@@ -1,15 +1,14 @@
-import express, { Request, Response } from 'express';
-import bodyParser from 'body-parser';
-import {filterImageFromURL, deleteLocalFiles} from './util/util';
+import express, { Request, Response } from "express";
+import bodyParser from "body-parser";
+import { filterImageFromURL, deleteLocalFiles } from "./util/util";
 
 (async () => {
-
   // Init the Express application
   const app = express();
 
   // Set the network port
   const port = process.env.PORT || 8082;
-  
+
   // Use the body parser middleware for post requests
   app.use(bodyParser.json());
 
@@ -28,19 +27,36 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
   //   the filtered image file [!!TIP res.sendFile(filteredpath); might be useful]
 
   /**************************************************************************** */
+  app.get("/filteredimage", async (req: Request, res: Response) => {
+    const { image_url } = req.query;
+
+    if (!image_url) {
+      return res.status(400).send(`image url is required`);
+    }
+
+    const filteredImagePath = await filterImageFromURL(image_url);
+    if (!filteredImagePath) {
+      res.status(500).send("Internal server error");
+    }
+
+    const files = [filteredImagePath];
+    res.status(200).sendFile(filteredImagePath);
+    res.on("finish", async function () {
+      await deleteLocalFiles(files);
+    });
+  });
 
   //! END @TODO1
-  
+
   // Root Endpoint
   // Displays a simple message to the user
-  app.get( "/", async ( req: Request, res: Response) => {
-    res.status(200).send("try GET /filteredimage?image_url={{}}")
-  } );
-  
+  app.get("/", async (req: Request, res: Response) => {
+    res.status(200).send("try GET /filteredimage?image_url={{}}");
+  });
 
   // Start the Server
-  app.listen( port, () => {
-      console.log( `server running http://localhost:${ port }` );
-      console.log( `press CTRL+C to stop server` );
-  } );
+  app.listen(port, () => {
+    console.log(`server running http://localhost:${port}`);
+    console.log(`press CTRL+C to stop server`);
+  });
 })();
